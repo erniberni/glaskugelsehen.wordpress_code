@@ -1,0 +1,61 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Eingabemaske f&uuml;r Filterparameter</title>
+<script type="text/javascript">
+<!--
+function chkFormular()
+{
+  var temp = document.Formular.ftime.value;
+  if (temp.length !=10) {
+    if (temp.length == 12 || temp == ""){
+      var ft = true;
+    }
+    else {
+      alert("falsches Datumsformat");
+      document.Formular.ftime.focus();
+      return false;
+    }
+  }
+  else {
+    document.Formular.ftime.value = "'" + temp + "'";
+    var ft = true;
+  }
+
+  temp = document.Formular.ttime.value;
+  if (temp.length !=10) {
+    if (temp.length == 12 || temp == ""){
+      var tt = true;
+    }
+    else {
+      alert("falsches Datumsformat");
+      document.Formular.ttime.focus();
+      return false;
+    }
+  }
+  else {
+    document.Formular.ttime.value = "'" + temp + "'";
+    var tt = true;
+  }
+
+  return ft && tt;
+}
+//-->
+</script>
+</head>
+<body bgcolor="#EEEEEE" text="#000000">
+
+<h2>Filtereingabe ttncgn</h2>
+
+<form name="Formular" action="rssionmap.html" method="get" onSubmit="return chkFormular()">
+<pre>
+Werte seit &lt;yyyy-mm-dd&gt;:     <input type="text" size="40" name="ftime">
+Werte bis vor &lt;yyyy-mm-dd&gt;:  <input type="text" size="40" name="ttime">
+SW (check f&uuml;r SW Map):        <input type="checkbox" name="col" value="0">
+
+Formular:                     <input type="submit" value="Absenden"><input type="reset" value="Abbrechen">
+</pre>
+</form>
+
+</body>
+</html>

@@ -1,0 +1,330 @@
+<!--Version sw_t6 2017.11-21-->
+<html>
+
+<head>
+    <title>TTN mapping on  Leafletjs</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.1.0/dist/leaflet.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/1.4.3/Control.FullScreen.min.css">
+    <style>
+      html, body, #mapid {
+        height: 100%;
+        padding: 0;
+        margin: 0;
+      }
+      .icon {
+          max-width: 70%;
+          max-height: 70%;
+          margin: 4px;
+      }
+      #gp{
+        position: absolute;
+        top: 7px;
+        right: 7px;
+        padding-right: 0px;
+        padding-left: 0px;
+        z-index: 9000;
+        font-weight: bold;
+        border-style: solid;
+        border-width: 1px;
+        border-radius: 7px;
+        background-color: #f2f2f2;
+        line-height: 0.6;
+        cursor:pointer;
+      }
+      #gm{
+        position: absolute;
+        top: 7px;
+        right: 40px;
+        padding-right: 0px;
+        padding-left: 0px;
+        z-index: 9000;
+        font-weight: bold;
+        border-style: solid;
+        border-width: 1px;
+        border-radius: 7px;
+        background-color: #f2f2f2;
+        line-height: 0.6;
+        cursor:pointer;
+      }
+      #dp{
+        position: absolute;
+        top: 50px;
+        right: 7px;
+        padding-right: 0px;
+        padding-left: 0px;
+        z-index: 9000;
+        font-weight: bold;
+        border-style: solid;
+        border-width: 1px;
+        border-radius: 7px;
+        background-color: #f2f2f2;
+        line-height: 0.6;
+        cursor:pointer;
+      }
+      #dm{
+        position: absolute;
+        top: 50px;
+        right: 40px;
+        padding-right: 0px;
+        padding-left: 0px;
+        z-index: 9000;
+        font-weight: bold;
+        border-style: solid;
+        border-width: 1px;
+        border-radius: 7px;
+        background-color: #f2f2f2;
+        line-height: 0.6;
+        cursor:pointer;
+      }
+    span:after {
+      content:".";
+      visibility:hidden;
+    }
+    </style>
+    <!-- Make sure you put this AFTER Leaflet's CSS -->
+    <script src="https://unpkg.com/leaflet@1.1.0/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/togeojson@0.16.0/togeojson.js"></script>
+    <script src="https://unpkg.com/leaflet-filelayer@1.0.0"></script>
+    <script src="http://code.jquery.com/jquery-2.1.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/1.4.3/Control.FullScreen.js"></script>
+</head>
+
+<body>
+      <div id="mapid"</div>
+      <div id = 'gp'><p><span></span>G+<span></span></p></div>
+      <div id = 'gm'><p><span></span><span></span>G-<span></span></p></div>
+      <div id = 'dp'><p><span></span>D+<span></span></p></div>
+      <div id = 'dm'><p><span></span><span></span>D-<span></span></p></div>
+</body>
+
+</html>
+    <script>
+        var fromTime = getQueryVariable("ftime");
+        var toTime = getQueryVariable("ttime");
+        var col = getQueryVariable("col");
+
+        function getQueryVariable(variable) {
+            var query = window.location.search.substring(1);
+            var vars = query.split("&");
+            for (var i = 0; i < vars.length; i++) {
+                var pair = vars[i].split("=");
+                if (pair[0] == variable) {
+                    return pair[1];
+                }
+            }
+        }
+        var mapProv = 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+        if (col == 0) {
+          mapProv = 'http://{s}.tiles.wmflabs.org/bw-mapnik/{z}/{x}/{y}.png';
+        }
+
+        var timerange;
+        if (typeof toTime === 'undefined' || toTime == "") {
+            toTime = 'now()';
+        }
+        if (typeof fromTime !== 'undefined' && fromTime != "") {
+            timerange = " WHERE time > " + fromTime + "AND time < " + toTime; // time > '2017-09-24' AND time < '2017-09-25'
+        } else {
+            timerange = " WHERE time > '2017-01-01' AND time < " + toTime;
+        }
+        console.log(timerange);
+
+        var mymap = L.map('mapid', {
+          fullscreenControl: {
+            pseudoFullscreen: true // if true, fullscreen to page width and height
+          }
+        }).setView([50.93058, 6.96224], 14);
+        mapLink = '<a href="http://openstreetmap.org">OpenStreetMap</a>';
+        L.tileLayer(
+            mapProv, {
+              attribution: '&copy; ' + mapLink + ' Contributors',
+              maxZoom: 18
+            }).addTo(mymap);
+
+        var DataGrp = [];
+        var Stackgroup1;
+        var jsonData2 = $.ajax({
+            url: "http://88.99.191.138:10040/query?db=test&q=SELECT counter,lat_sense,lon_sense,rssi,snr,gtw_id,no_gw from gps" + timerange, //  WHERE time > '2017-09-24' AND time < '2017-09-25'",
+            type: 'GET',
+        }).done(function(data) {
+            var maprows = data["results"][0]["series"][0]["values"].length;
+            //console.log(data);
+            //alert("Es sind "+maprows+" Werte")
+            for (i = 0; i < maprows; i++) {
+                var sqtime = new Date(data["results"][0]["series"][0]["values"][i][0]);
+                var sqcount = data["results"][0]["series"][0]["values"][i][1];
+                var sqlat = data["results"][0]["series"][0]["values"][i][2];
+                var sqlon = data["results"][0]["series"][0]["values"][i][3];
+                var rssi = data["results"][0]["series"][0]["values"][i][4];
+                if (sqlat && sqlon != 0) {
+                    var snr = data["results"][0]["series"][0]["values"][i][5];
+                    var gtwid = data["results"][0]["series"][0]["values"][i][6];
+                    var gtwcount = data["results"][0]["series"][0]["values"][i][7];
+                    var gtwcheck = 0;
+                    if (gtwcount > 1) {
+                        gtwcheck = 1;
+                        while (gtwcheck > 0 && i < maprows - 1) {
+                            if (sqcount == data["results"][0]["series"][0]["values"][i + gtwcheck][1]) {
+                                if (rssi > data["results"][0]["series"][0]["values"][i + gtwcheck][4]) {
+                                    i++;
+                                } else {
+                                    rssi = data["results"][0]["series"][0]["values"][i + gtwcheck][4];
+                                    i++;
+                                }
+                            } else {
+                                gtwcheck = 0;
+                            }
+                        }
+                        i = i + gtwcheck;
+                    }
+                    //console.log(sqcount, sqlat, sqlon, rssi);
+                    var bounds = [
+                        [sqlat - 0.0003 / 2, sqlon - 0.0005 / 2],
+                        [sqlat + 0.0003 / 2, sqlon + 0.0005 / 2]
+                    ];
+                    //alert(sqlat);
+                    // create an orange rectangle
+                    // var farbe = rgb(50,125,(-1*rssi));
+                    var farbe = rgbn(rssi);
+                    //alert(farbe);
+                    var rect =
+                        L.rectangle(bounds, {
+                            color: farbe,
+                            weight: 1,
+                            fillOpacity: 0.8
+                        });
+                    rect.bindPopup(sqtime.toLocaleDateString() + " " + sqtime.toLocaleTimeString() + "<br>rssi: " + rssi + " snr: " + snr + "<br>" + gtwid + "<br># Gateways: " + gtwcount);
+                    rect.on('mouseover', function(e) {
+                        this.openPopup();
+                    });
+                    rect.on('mouseout', function(e) {
+                        this.closePopup();
+                    });
+                    DataGrp.push(rect);
+                  }
+            }
+            Stackgroup1 = L.featureGroup(
+                DataGrp
+            ).addTo(mymap);
+        }); // Ende ajax Abfrage
+
+        var GWGroup = [];
+        var Stackgroup2;
+        var jsonData = $.ajax({
+            url: "http://88.99.191.138:10040/query?db=test&q=SELECT MAX(lat_gw),MAX(lon_gw) from gps" + timerange + " group by gtw_id",
+            type: 'GET',
+        }).done(function(data) {
+            var myrows = data["results"][0]["series"].length;
+            //alert(myrows);
+
+            for (i = 0; i < myrows; i++) {
+                var marker =
+                    L.circleMarker([data["results"][0]["series"][i]["values"][0][1], data["results"][0]["series"][i]["values"][0][2]], {
+                        color: 'black',
+                        fillColor: '#ff33cc', //#f03',
+                        radius: 8,
+                        fillOpacity: 0.8
+                    });
+                marker.bindPopup(data["results"][0]["series"][i]["tags"]["gtw_id"]);
+                marker.on('mouseover', function(e) {
+                    this.openPopup();
+                });
+                marker.on('mouseout', function(e) {
+                    this.closePopup();
+                });
+                GWGroup.push(marker);
+            }
+            Stackgroup2 = L.featureGroup(
+                GWGroup
+            ).addTo(mymap);
+        }); // End ajax Abfrage
+
+
+        function rgbn(value) {
+            if (value >= -100) return ('#ff0000'); // rot
+            if (value >= -105) return ('#ff8800'); // orange
+            if (value >= -110) return ('#ffff00'); // gelb
+            if (value >= -115) return ('#00ff00'); // grün
+            if (value >= -120) return ('#00ffff'); // cyan
+            if (value < -120) return ('#0000ff'); // blau
+        }
+
+        function rgb(minimum, maximum, value) {
+            //minimum = float(minimum);
+            //maximum = float(maximum);
+            ratio = 2 * (value - minimum) / (maximum - minimum);
+            b = Math.floor(Math.max(0, 255 * (1 - ratio)));
+            r = Math.floor(Math.max(0, 255 * (ratio - 1)));
+            g = 255 - b - r;
+            //return r*0xff00 + g*0xff + b;
+            var rgb = b | (g << 8) | (r << 16);
+            //alert(rgb);
+            // return rgb;
+            return '#' + (0x1000000 + rgb).toString(16).slice(1);
+        };
+
+        L.Control.Watermark = L.Control.extend({
+            onAdd: function(map) {
+                var img = L.DomUtil.create('img');
+
+                img.src = 'rssicolors.png';
+                img.style.width = '130px';
+
+                return img;
+            },
+
+            onRemove: function(mymap) {
+                // Nothing to do here
+            }
+        });
+
+        L.control.watermark = function(opts) {
+            return new L.Control.Watermark(opts);
+        }
+
+        L.control.watermark({
+            position: 'bottomleft'
+        }).addTo(mymap);
+
+        /*var popup = L.popup();
+        function onMapClick(e) {
+            popup
+                .setLatLng(e.latlng)
+                .setContent(e.latlng.toString())
+                .openOn(mymap);
+        }
+        mymap.on('click', onMapClick);*/
+
+        var style = {
+            color: 'red',
+            opacity: 1,
+            fillOpacity: 1,
+            weight: 4,
+            clickable: false
+        };
+        L.Control.FileLayerLoad.LABEL = '<img class="icon" src="https://unpkg.com/leaflet-filelayer@1.0.0/docs/folder.svg" alt="file icon"/>';
+        var gpx = L.Control.fileLayerLoad({
+            fitBounds: true,
+            layerOptions: {
+                style: style
+            },
+        }).addTo(mymap);
+
+        $('#gp').click(function(){
+          Stackgroup2.bringToFront();
+        });
+
+        $('#gm').click(function(){
+          Stackgroup2.bringToBack();
+        });
+
+        $('#dp').click(function(){
+          Stackgroup1.bringToFront();
+        });
+
+        $('#dm').click(function(){
+          Stackgroup1.bringToBack();
+        });
+    </script>
